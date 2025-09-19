@@ -47,6 +47,7 @@ include = [
   "plugin/*.py",
   "plugin/icon.png",
   "plugin/icon_full.png",
+  "plugin/settings.json"
 ]
 icon = "resources/icon.png"
 # hosted on GitHub pages, remember to change username and project name!

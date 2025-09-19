@@ -11,6 +11,7 @@ import wx
 
 from .version import __version__
 from .standards_dialog import StandardsDialog
+from .part_dialog import PartDialog
 
 class UGRDialog(wx.Dialog):
     # Program settings (populated on startup)
@@ -39,7 +40,7 @@ class UGRDialog(wx.Dialog):
 
         self.SetSizerAndFit(box)
 
-        with open('settings.json') as f:
+        with open(os.path.join(os.path.dirname(__file__), "settings.json")) as f:
             d = json.load(f)
             print(d)
 
@@ -153,30 +154,27 @@ class UGRDialog(wx.Dialog):
         try:
             board = pcbnew.GetBoard()
             if (self.confirm_fileshare()):
-                part_name_dlg = wx.TextEntryDialog(self, "Please enter the name of your part below: (e.g. TSAL Main Board)", caption="Enter part name")
-                part_name_dlg.ShowModal()
-                part_name = part_name_dlg.GetValue()
+                dlg = PartDialog(None, self.settings_folders)
 
-                ## PART_NAME IS NOT CORRECT, GIVES NUMBER. ALSO MAKE IT CHECK FOR 2.3.X BEFORE SETTING NAME BELOW.
+                if dlg.ShowModal() == wx.ID_OK:
+                    car, subteam, subteam_path, part = dlg.get_values()
+                    print(f"Car: {car}, Subteam: {subteam}, Part: {part}")
 
-                ts_or_lv = wx.MessageDialog(self, "Which subteam is this part for?\n\nSubmissions are split into Tractive System Electronics and Low Voltage Electronics.\n\nPlease choose from below to determine where data is stored.", "Fileshare required!",style=wx.YES_NO)
-                ts_or_lv.SetYesNoLabels("Low Voltage", "Tractive System")
-                res = ts_or_lv.ShowModal()
+                dlg.Destroy()
 
-                if (res == wx.ID_YES):
-                    containing_folder = rf'\\lumiere.eng-ad.gla.ac.uk\groups\UGR\UGR-26\Engineering\Electrical Systems\1 - Low Voltage Electronics\1.3 - Submissions\1.3.1 - PCB Submissions'
-                elif (res == wx.ID_NO):
-                    containing_folder = rf'\\lumiere.eng-ad.gla.ac.uk\groups\UGR\UGR-26\Engineering\Electrical Systems\2 - Tractive System Electronics\2.3 - Submissions\2.3.1 - PCB Submissions'
-                
-                next_id = self.get_next_id(containing_folder)
+                subteam_path = os.path.join(self.settings_fs_unc_path, subteam_path)
 
-                folder_name = f"{next_id} - {part_name}"
-                folder_path = f"{containing_folder}\{folder_name}"
+                next_id = self.get_next_id(subteam_path)
+
+                folder_name = f"{next_id} - {part}"
+                folder_path = f"{subteam_path}\{folder_name}"
 
                 dest = wx.MessageBox(f"Your project will be uploaded to the following folder:\n{folder_path}")
 
                 os.makedirs(folder_path)
-                self.compress_and_upload()
+                self.compress_and_upload(f"{folder_path}\\{car}_{part}")
+
+                # TODO: VERSIONING
 
                 
 
