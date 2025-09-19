@@ -2,6 +2,7 @@ import os
 import sys
 import subprocess
 import shutil
+import json
 
 from pathlib import Path
 
@@ -9,15 +10,17 @@ import pcbnew
 import wx
 
 from .version import __version__
-
-from .stencil_dialog import StencilDialog
-
-try:
-    from kikit.stencil import createPrinted
-except Exception as e:
-    wx.LogMessage(f"error occured: {e}")
+from .standards_dialog import StandardsDialog
 
 class UGRDialog(wx.Dialog):
+    # Program settings (populated on startup)
+    settings_fs_unc_path = ""
+    settings_folders = {}
+
+    # Project Settings (populated on startup)
+    project_name = ""
+    submission_path = ""
+
     def __init__(self: "UGRDialog", parent: wx.Frame) -> None:
         super().__init__(parent, -1, "UGRacing Plugin Dialog")
 
@@ -35,6 +38,15 @@ class UGRDialog(wx.Dialog):
         box.Add(buttons, 0, wx.EXPAND | wx.ALL, 5)
 
         self.SetSizerAndFit(box)
+
+        with open('settings.json') as f:
+            d = json.load(f)
+            print(d)
+
+            self.settings_fs_unc_path = d["Fileshare_UNC_Path"]
+            self.settings_folders = d["Folders"]
+
+
 
     def get_information_section(self) -> wx.BoxSizer:
         source_dir = os.path.dirname(__file__)
@@ -56,38 +68,118 @@ class UGRDialog(wx.Dialog):
 
     def get_button_section(self) -> wx.BoxSizer:
         box = wx.BoxSizer(wx.VERTICAL)
-        stencil = wx.Button(self, -1, label="Stencil (for 3DP)")
 
-        stencil.Bind(wx.EVT_BUTTON, self.on_stencil_click)
+        init_folder = wx.Button(self, -1, label="Initialise Folder")
+        init_folder.Bind(wx.EVT_BUTTON, self.on_init_folder)
 
-        box.Add(stencil, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
+        set_defaults = wx.Button(self, -1, label="Set Defaults")
+        set_defaults.Bind(wx.EVT_BUTTON, self.on_set_defaults)
+
+        standards = wx.Button(self, -1, label="Standards Check")
+        standards.Bind(wx.EVT_BUTTON, self.on_standards_click)
+
+        box.Add(init_folder, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
+        box.Add(set_defaults, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
+        box.Add(standards, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
         return box
 
-    def on_stencil_click(self, event: wx.CommandEvent) -> None:
+    def on_standards_click(self, event: wx.CommandEvent) -> None:
         try:
-            stencildialog = StencilDialog(self)
+            standardsdialog = StandardsDialog(self)
         except Exception as e:
-            wx.LogMessage(f"Dialog creation failed: {e}")
+            ebox = wx.MessageBox(f"Dialog creation failed: {e}")
+            ebox.Show()
 
-        if stencildialog.ShowModal() == wx.ID_OK:
-            try:
-                board = pcbnew.GetBoard()
-                pcb_path = Path(board.GetFileName())
-                output_path = str(pcb_path.parent / "stencils")
-                wx.LogMessage(output_path)
-                ft_input = stencildialog.ft_input.GetValue()
-                pt_input = stencildialog.pt_input.GetValue()
-                if not shutil.which("openscad"):
-                    os.environ["PATH"] = f"\\\\LUMIERE.eng-ad.gla.ac.uk\\Groups\\UGR\\Software\\openscad-2021.01{os.pathsep}{os.environ['PATH']}"
-                pw_message = wx.MessageDialog(self, "Stencils generating. This may take some time. Press OK to ackowledge and continue.", "Action may take some time", wx.OK | wx.ICON_INFORMATION)
-                pw_message.ShowModal()
-                createPrinted(pcb_path, output_path, 1.6, 0.15, 1, "", "", float(ft_input), float(pt_input))
-                openX = wx.MessageDialog(self, "The stencils have successfully been generated. Would you like to open the folder?", "Open stencil folder?", wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION)
-                response = openX.ShowModal()    
+        if standardsdialog.ShowModal() == wx.ID_OK:
+            standardsdialog.checkStandards()
 
-                if response == wx.ID_YES:
-                    subprocess.Popen(["explorer", output_path])
-            except Exception as e:
-                wx.LogMessage(f"Error occured: {e}")
-            
-        stencildialog.Destroy()
+    def on_set_defaults(self, event: wx.CommandEvent) -> None:
+        try:
+            board = pcbnew.GetBoard()
+            ds = board.GetDesignSettings()
+
+            # Tracks / vias
+            ds.SetTrackWidth(int(0.2 * 1e6))    # 0.2 mm
+            ds.SetClearance(int(0.2 * 1e6))      # 0.2 mm
+            ds.SetViaSize(int(0.4 * 1e6))        # 0.4 mm
+            ds.SetViaDrill(int(0.25 * 1e6))       # 0.25 mm 
+        except Exception as e:
+            ebox = wx.MessageBox(f"Failed to set defaults: {e}")
+            ebox.Show()
+
+    def confirm_fileshare(self):
+        vpn_box = wx.MessageDialog(self, "Fileshare connection required\n\nThe following action requires connection to the fileshare. If you aren't connected to Eduroam, or on a university/GUES computer, please connect the VPN now.\n\nPress continue to proceed.", "Fileshare required!",style=wx.YES_NO)
+        vpn_box.SetYesNoLabels("Continue", "Cancel")
+        res = vpn_box.ShowModal()
+
+        if res == wx.ID_YES:
+            res = os.path.exists(r'\\lumiere.eng-ad.gla.ac.uk\groups\UGR')
+
+            if not res:
+                wx.MessageBox("Error: Failed to connect to fileshare. Please check your internet/VPN connection and try again.")
+
+        else:
+            res = False
+
+        return res
+    
+    def get_next_id(self, folder):
+        subfolders = [ f.path for f in os.scandir(folder) if f.is_dir() ]
+
+        folder_name = os.path.basename(folder)
+        folder_id = folder_name[0:folder_name.index(" ")]
+        id_base = folder_id + "."
+        largest_id = 0
+
+        for f in subfolders:
+            name = os.path.basename(f)
+            id = name[0:name.index(" ")]
+            id_end = id[id.rfind(".")+1:]
+
+            if int(id_end) > largest_id: 
+                largest_id = int(id_end)
+
+        next_id = id_base + str(largest_id+1)
+        return next_id
+    
+    def compress_and_upload(self, zipname):
+        board = pcbnew.GetBoard()
+        folder = os.getcwd()
+
+        shutil.make_archive(zipname, 'zip', folder)
+
+
+    def on_init_folder(self, event: wx.CommandEvent) -> None:
+        try:
+            board = pcbnew.GetBoard()
+            if (self.confirm_fileshare()):
+                part_name_dlg = wx.TextEntryDialog(self, "Please enter the name of your part below: (e.g. TSAL Main Board)", caption="Enter part name")
+                part_name_dlg.ShowModal()
+                part_name = part_name_dlg.GetValue()
+
+                ## PART_NAME IS NOT CORRECT, GIVES NUMBER. ALSO MAKE IT CHECK FOR 2.3.X BEFORE SETTING NAME BELOW.
+
+                ts_or_lv = wx.MessageDialog(self, "Which subteam is this part for?\n\nSubmissions are split into Tractive System Electronics and Low Voltage Electronics.\n\nPlease choose from below to determine where data is stored.", "Fileshare required!",style=wx.YES_NO)
+                ts_or_lv.SetYesNoLabels("Low Voltage", "Tractive System")
+                res = ts_or_lv.ShowModal()
+
+                if (res == wx.ID_YES):
+                    containing_folder = rf'\\lumiere.eng-ad.gla.ac.uk\groups\UGR\UGR-26\Engineering\Electrical Systems\1 - Low Voltage Electronics\1.3 - Submissions\1.3.1 - PCB Submissions'
+                elif (res == wx.ID_NO):
+                    containing_folder = rf'\\lumiere.eng-ad.gla.ac.uk\groups\UGR\UGR-26\Engineering\Electrical Systems\2 - Tractive System Electronics\2.3 - Submissions\2.3.1 - PCB Submissions'
+                
+                next_id = self.get_next_id(containing_folder)
+
+                folder_name = f"{next_id} - {part_name}"
+                folder_path = f"{containing_folder}\{folder_name}"
+
+                dest = wx.MessageBox(f"Your project will be uploaded to the following folder:\n{folder_path}")
+
+                os.makedirs(folder_path)
+                self.compress_and_upload()
+
+                
+
+        except Exception as e:
+            ebox = wx.MessageBox(f"Error occurred: {e}")
+            ebox.Show()

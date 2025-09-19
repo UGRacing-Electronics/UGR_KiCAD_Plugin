@@ -19,9 +19,7 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)"
 ]
 dynamic = ["version"]
-dependencies = [
-  "kikit"
-]
+dependencies = []
 
 [project.urls]
 "Homepage" = "https://github.com/YukiSuter/ugr-kicad-plugin"
@@ -43,7 +41,7 @@ description_full = [
 identifier = "com.ugracing.yukis.ugracing-plugin"
 author = { name = "Yuki Suter", web="https://yukisuter.com" }
 status = "development"
-kicad_version = "8.0"
+kicad_version = "9.0"
 sources = ["plugin"]
 include = [
   "plugin/*.py",
@@ -71,6 +69,7 @@ dependencies = [
   "black>=23.1.0",
   "mypy>=1.0.0",
   "ruff>=0.0.243",
+  "kicad-python",
 ]
 [tool.hatch.envs.lint.scripts]
 typing = "mypy --install-types --non-interactive {args:src tests}"
