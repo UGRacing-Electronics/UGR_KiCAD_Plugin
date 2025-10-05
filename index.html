@@ -1,0 +1,71 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"
+    />
+  </head>
+  <script src="https://cdn.jsdelivr.net/npm/linkifyjs@4.1.1/dist/linkify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/linkify-html@4.1.1/dist/linkify-html.min.js"></script>
+  <script>
+    window.onload = function () {
+      let packages = document.getElementById("packages");
+      packages.innerHTML = linkifyHtml(packages.innerHTML);
+    };
+  </script>
+  <body>
+    <main class="container">
+      <p>
+        Add <mark>https://github.com/YukiSuter/repository.json</mark> to KiCad's repository
+        list to use these packages:
+      </p>
+      <pre><code id="packages">{
+    "packages": [
+        {
+            "$schema": "https://go.kicad.org/pcm/schemas/v1",
+            "name": "UGRacing Utilities",
+            "description": "UGRacing Plugin for KiCad",
+            "description_full": "This is a plugin intended for use by UGRacing.",
+            "identifier": "com.ugracing.yukis.ugracing-plugin",
+            "type": "plugin",
+            "author": {
+                "name": "Yuki Suter",
+                "contact": {
+                    "web": "https://yukisuter.com"
+                }
+            },
+            "license": "MIT",
+            "resources": {
+                "Homepage": "https://github.com/YukiSuter/ugr-kicad-plugin",
+                "Bug Tracker": "https://github.com/YukiSuter/ugr-kicad-plugin/issues"
+            },
+            "versions": [
+                {
+                    "version": "0.1.0",
+                    "status": "development",
+                    "kicad_version": "9.0",
+                    "download_sha256": "2cbf0c2e1664a7b42640ce92c17fb6f9282b2a5a982a51f65b873a02a1c6a423",
+                    "download_size": 26596,
+                    "install_size": 25176,
+                    "download_url": "https://github.com/YukiSuter/ugr-kicad-plugin"
+                }
+            ]
+        }
+    ]
+}</code></pre>
+      <footer>
+        <small
+          >Built with
+          <a href="https://github.com/adamws/hatch-kicad" class="secondary"
+            >hatch-kicad</a
+          ></small
+        >
+      </footer>
+    </main>
+  </body>
+</html>

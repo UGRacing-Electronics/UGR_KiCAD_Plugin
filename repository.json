@@ -1,0 +1,22 @@
+{
+    "$schema": "https://gitlab.com/kicad/code/kicad/-/raw/master/kicad/pcm/schemas/pcm.v1.schema.json#/definitions/Repository",
+    "maintainer": {
+        "name": "Yuki Suter",
+        "contact": {
+            "web": "https://yukisuter.com"
+        }
+    },
+    "name": "https://github.com/YukiSuter repository",
+    "packages": {
+        "url": "https://github.com/YukiSuter/packages.json",
+        "sha256": "2d226ec2e2926502468b442d89087830f1048f4e70184ff2463e0d551f95560c",
+        "update_time_utc": "2025-10-05 15:05:10",
+        "update_timestamp": 1759676710
+    },
+    "resources": {
+        "url": "https://github.com/YukiSuter/resources.zip",
+        "sha256": "a47969d4701a8426de1b5fe90cd2f9013bbfe185c90a05f39febb6acc95ec561",
+        "update_time_utc": "2025-10-05 15:05:10",
+        "update_timestamp": 1759676710
+    }
+}
