@@ -143,12 +143,32 @@ class UGRDialog(wx.Dialog):
         next_id = id_base + str(largest_id+1)
         return next_id
     
+    def get_next_v(self, folder):
+        files = [ f.path for f in os.scandir(folder) if f.is_file() ]
+        largest_v = 0
+
+        for f in files:
+            name = os.path.basename(f)
+            v_index = id.rfind("V")
+            ext_index = id.rfind(".")
+
+            current_v = name[v_index:ext_index-1]
+
+            wx.MessageBox(current_v)
+
+            if int(current_v) > largest_v: 
+                largest_v = int(current_v)
+
+        next_v = largest_v + 1
+        return next_v
+    
     def compress_and_upload(self, zipname):
         board = pcbnew.GetBoard()
         folder = os.getcwd()
 
         shutil.make_archive(zipname, 'zip', folder)
 
+    # def on_new_version(self, event: wx.CommandEvent) -> None:
 
     def on_init_folder(self, event: wx.CommandEvent) -> None:
         try:
@@ -172,9 +192,7 @@ class UGRDialog(wx.Dialog):
                 dest = wx.MessageBox(f"Your project will be uploaded to the following folder:\n{folder_path}")
 
                 os.makedirs(folder_path)
-                self.compress_and_upload(f"{folder_path}\\{car}_{part}")
-
-                # TODO: VERSIONING
+                self.compress_and_upload(f"{folder_path}\\{car}_{part}_V1")
 
                 
 
